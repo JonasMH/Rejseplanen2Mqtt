@@ -15,7 +15,7 @@ WORKDIR "/src/src"
 RUN dotnet publish "./Rejseplanen2Mqtt.csproj" --no-restore -c Release -o /app
 RUN rm /app/*.dbg /app/*.Development.json
 
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0 AS final
+FROM mcr.microsoft.com/dotnet/nightly/runtime-deps:8.0-alpine-aot AS final
 WORKDIR /app
 COPY --from=build /app .
 USER $APP_UID

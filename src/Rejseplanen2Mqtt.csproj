@@ -8,6 +8,7 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
     <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
     <UserSecretsId>0519c1dd-b55e-4ba4-a355-11e67a7021a6</UserSecretsId>
   </PropertyGroup>
 
