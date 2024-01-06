@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using MQTTnet.Client;
 using OpenTelemetry.Metrics;
-using Rejseplanen2Mqtt;
 using Rejseplanen2Mqtt.Client;
 using System.Security.Cryptography.X509Certificates;
 using ToMqttNet;
@@ -85,13 +84,3 @@ app.MapHealthChecks("/health");
 app.MapPrometheusScrapingEndpoint("/metrics");
 
 app.Run();
-
-public class MqttOptions
-{
-	public int Port { get; set; }
-	public bool UseTls { get; set; }
-	public string Server { get; set; } = null!;
-	public string CaCrt { get; set; } = null!;
-	public string ClientCrt { get; set; } = null!;
-	public string ClientKey { get; set; } = null!;
-}

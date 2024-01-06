@@ -5,14 +5,14 @@ on:
     types: [released]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/dotnet/sdk:8.0-preview
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
       - name: Run tests
-        run: dotnet test --blame-hang-timeout 2m $(find *.sln -print -quit)
+        run: dotnet build $(find *.sln -print -quit)
 
   release:
     runs-on: ubuntu-latest

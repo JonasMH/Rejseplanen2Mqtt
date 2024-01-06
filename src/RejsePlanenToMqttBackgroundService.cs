@@ -8,12 +8,17 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using ToMqttNet;
 
-public class RejsePlanenToMqttBackgroundService : BackgroundService
+namespace Rejseplanen2Mqtt.Client;
+
+public class RejsePlanenToMqttBackgroundService(
+    ILogger<RejsePlanenToMqttBackgroundService> logger,
+    RejseplanenClient rejseplanenClient,
+    MqttConnectionService mqtt) : BackgroundService
 {
-	private readonly ILogger<RejsePlanenToMqttBackgroundService> _logger;
-	private readonly RejseplanenClient _rejseplanenClient;
-	private readonly MqttConnectionService _mqtt;
-	private List<TripToInform> _tripsToPublish = [
+	private readonly ILogger<RejsePlanenToMqttBackgroundService> _logger = logger;
+	private readonly RejseplanenClient _rejseplanenClient = rejseplanenClient;
+	private readonly MqttConnectionService _mqtt = mqtt;
+	private readonly List<TripToInform> _tripsToPublish = [
 		new TripToInform {
 			Name = "Aarhus to Hedensted",
 			OriginId = "8600053", // Aarhus H
@@ -26,14 +31,7 @@ public class RejsePlanenToMqttBackgroundService : BackgroundService
 		},
 	];
 
-	public RejsePlanenToMqttBackgroundService(ILogger<RejsePlanenToMqttBackgroundService> logger, RejseplanenClient rejseplanenClient, MqttConnectionService mqtt)
-	{
-		_logger = logger;
-		_rejseplanenClient = rejseplanenClient;
-		_mqtt = mqtt;
-	}
-
-	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		foreach (var trip in _tripsToPublish)
 		{
@@ -80,7 +78,7 @@ public class RejsePlanenToMqttBackgroundService : BackgroundService
 					var nextDepatureDate = datePattern.Parse(nextTrip.Origin.Date).Value;
 
 					var nextDepature = nextDepatureTime.On(nextDepatureDate);
-					var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")).LocalDateTime;
+					var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
 
 					var timeToNext = Period.Between(localTime, nextDepature, PeriodUnits.Minutes);
 					result.Value = timeToNext.Minutes;
@@ -88,7 +86,7 @@ public class RejsePlanenToMqttBackgroundService : BackgroundService
 
 				await _mqtt.PublishAsync(new MqttApplicationMessageBuilder()
 					.WithTopic(_mqtt.MqttOptions.NodeId + "/status/trips/" + tripToPublish.Name.ToLower().Replace(" ", "_"))
-					.WithPayload(JsonSerializer.Serialize(result))
+					.WithPayload(JsonSerializer.Serialize(result, RejseplanenJsonContext.Default.TripMqttStatusUpdate))
 					.Build());
 
 			}
@@ -101,13 +99,13 @@ public class TripMqttStatusUpdate
 {
 	[JsonPropertyName("value")]
 	public long Value { get; set; }
-	[JsonPropertyName("attributes")]
-	public JsonNode Attributes { get; set; }
+    [JsonPropertyName("attributes")]
+	public JsonNode Attributes { get; set; } = null!;
 }
 
 public class TripToInform
 {
-	public string Name { get; set; }
-	public string OriginId { get; set; }
-	public string DestId { get; set; }
+	public string Name { get; set; } = null!;
+    public string OriginId { get; set; } = null!;
+    public string DestId { get; set; } = null!;
 }
