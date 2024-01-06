@@ -2,8 +2,8 @@
 
 namespace Rejseplanen2Mqtt.Client;
 
-	public class JourneyDetailRef
+public class JourneyDetailRef
 {
     [JsonPropertyName("ref")]
-    public string Ref { get; set; }
+    public string Ref { get; set; } = null!;
 }

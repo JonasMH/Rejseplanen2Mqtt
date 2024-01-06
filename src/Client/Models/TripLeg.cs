@@ -3,16 +3,16 @@
 namespace Rejseplanen2Mqtt.Client;
 
 public class TripLeg
-	{
-		[JsonPropertyName("name")]
-		public string Name { get; set; } = null!;
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = null!;
 
     [JsonPropertyName("type")]
-		public string Type { get; set; } = null!;
+    public string Type { get; set; } = null!;
 
     [JsonPropertyName("Origin")]
-		public TripLegStation Origin { get; set; } = null!;
+    public TripLegStation Origin { get; set; } = null!;
 
     [JsonPropertyName("Destination")]
-		public TripLegStation Destination { get; set; } = null!;
+    public TripLegStation Destination { get; set; } = null!;
 }

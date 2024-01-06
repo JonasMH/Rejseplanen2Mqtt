@@ -2,8 +2,8 @@
 
 namespace Rejseplanen2Mqtt.Client;
 
-	public class DepartureBoardResponse
+public class DepartureBoardResponse
 {
     [JsonPropertyName("DepartureBoard")]
-    public DepartureBoard DepartureBoard { get; set; }
+    public DepartureBoard DepartureBoard { get; set; } = null!;
 }

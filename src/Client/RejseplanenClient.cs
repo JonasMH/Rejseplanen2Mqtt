@@ -26,18 +26,17 @@ public class RejseplanenClient
     }
 
     public async Task<List<List<TripLeg>>> TripAsync(TripRequestOptions options)
+	{
+		var request = new HttpRequestMessage()
 		{
-			var request = new HttpRequestMessage()
-			{
-				RequestUri = new Uri($"/bin/rest.exe/trip?originId={options.OriginId}&destId={options.DestId}&format=json", UriKind.Relative)
-			};
-			var response = await _httpClient.SendAsync(request);
+			RequestUri = new Uri($"/bin/rest.exe/trip?originId={options.OriginId}&destId={options.DestId}&format=json", UriKind.Relative)
+		};
+		var response = await _httpClient.SendAsync(request);
 
-			response.EnsureSuccessStatusCode();
+		response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadFromJsonAsync(RejseplanenJsonContext.Default.TripResponse)!;
         var result = new List<List<TripLeg>>();
-
 
         foreach (var trip in json!.TripList.Trips)
         {
@@ -45,14 +44,14 @@ public class RejseplanenClient
             {
                 result.Add(JsonSerializer.Deserialize(trip.Leg.AsArray(), RejseplanenJsonContext.Default.ListTripLeg)!);
             } else if (trip.Leg.GetValueKind() == JsonValueKind.Object)
-				{
-					result.Add([JsonSerializer.Deserialize(trip.Leg.AsObject(), RejseplanenJsonContext.Default.TripLeg)!]);
-				} else
+			    {
+				    result.Add([JsonSerializer.Deserialize(trip.Leg.AsObject(), RejseplanenJsonContext.Default.TripLeg)!]);
+			    } else
             {
                 throw new InvalidOperationException();
             }
-			}
-
-			return result;
 		}
+
+		return result;
+	}
 }
