@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  rejseplanen2mqtt:
+    image: ${DOCKER_REGISTRY-}rejseplanen2mqtt
+    build:
+      context: .
+      dockerfile: src/Dockerfile
