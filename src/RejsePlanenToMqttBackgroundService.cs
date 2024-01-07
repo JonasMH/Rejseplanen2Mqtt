@@ -42,8 +42,8 @@ public class RejsePlanenToMqttBackgroundService(
 				UnitOfMeasurement = HomeAssistantUnits.TIME_MINUTES.Value,
 				ValueTemplate = "{{ value_json.value }}",
 				StateTopic = _mqtt.MqttOptions.NodeId + "/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
-				JsonAttributesTopic = _mqtt.MqttOptions.NodeId + "rejseplanen/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
-				JsonAttributesTemplate = "{{ value_json.attributes }}",
+				JsonAttributesTopic = _mqtt.MqttOptions.NodeId + "/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
+				JsonAttributesTemplate = "{{ value_json.attributes | to_json }}",
 			};
 
 			await _mqtt.PublishDiscoveryDocument(discoveryDoc);
