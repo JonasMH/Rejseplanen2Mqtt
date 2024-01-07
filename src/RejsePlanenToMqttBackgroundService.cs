@@ -70,9 +70,9 @@ public class RejsePlanenToMqttBackgroundService(
                 // Filter out any trips with multiple legs
                 var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
 
-                foreach (var directTrip in response.Where(x => x.Count == 1)) // Only show direct trips
+                foreach (var directTrip in response.Where(x => !x.Cancelled && x.Legs.Count == 1)) // Only show direct trips
                 {
-                    var firstLeg = directTrip.First();
+                    var firstLeg = directTrip.Legs.First();
                     var tripStart = firstLeg.Origin;
 
                     var timePattern = LocalTimePattern.CreateWithInvariantCulture("HH:mm"); // 13:30

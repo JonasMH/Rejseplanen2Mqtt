@@ -25,7 +25,7 @@ public class RejseplanenClient
         return (await response.Content.ReadFromJsonAsync(RejseplanenJsonContext.Default.DepartureBoardResponse))!;
     }
 
-    public async Task<List<List<TripLeg>>> TripAsync(TripRequestOptions options)
+    public async Task<List<TripResponse>> TripAsync(TripRequestOptions options)
 	{
 		var request = new HttpRequestMessage()
 		{
@@ -36,20 +36,26 @@ public class RejseplanenClient
 		response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadFromJsonAsync(RejseplanenJsonContext.Default.TripResponse)!;
-        var result = new List<List<TripLeg>>();
+        var result = new List<TripResponse>();
 
         foreach (var trip in json!.TripList.Trips)
         {
-            if(trip.Leg.GetValueKind() == JsonValueKind.Array)
+            var newTrip = new TripResponse();
+            newTrip.Cancelled = trip.Cancelled != null && bool.Parse(trip.Cancelled);
+
+            if (trip.Leg.GetValueKind() == JsonValueKind.Array)
             {
-                result.Add(JsonSerializer.Deserialize(trip.Leg.AsArray(), RejseplanenJsonContext.Default.ListTripLeg)!);
+                newTrip.Legs.AddRange(JsonSerializer.Deserialize(trip.Leg.AsArray(), RejseplanenJsonContext.Default.ListTripLeg)!);
             } else if (trip.Leg.GetValueKind() == JsonValueKind.Object)
-			    {
-				    result.Add([JsonSerializer.Deserialize(trip.Leg.AsObject(), RejseplanenJsonContext.Default.TripLeg)!]);
-			    } else
+			{
+                newTrip.Legs.Add(JsonSerializer.Deserialize(trip.Leg.AsObject(), RejseplanenJsonContext.Default.TripLeg)!);
+			}
+            else
             {
                 throw new InvalidOperationException();
             }
+
+            result.Add(newTrip);
 		}
 
 		return result;
