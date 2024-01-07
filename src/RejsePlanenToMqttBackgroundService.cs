@@ -62,29 +62,41 @@ public class RejsePlanenToMqttBackgroundService(
 				var result = new TripMqttStatusUpdate
 				{
 					Value = -1,
+                    Attributes = new() {
+                        Timestamp = SystemClock.Instance.GetCurrentInstant().ToUnixTimeSeconds(),
+                    }
 				};
 
-				// Filter out any trips with multiple legs
-				var directTrips = response.Where(x => x.Count == 1).ToList();
+                // Filter out any trips with multiple legs
+                var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
 
-				var nextTrip = directTrips.FirstOrDefault()?.FirstOrDefault();
+                foreach (var directTrip in response.Where(x => x.Count == 1)) // Only show direct trips
+                {
+                    var firstLeg = directTrip.First();
+                    var tripStart = firstLeg.Origin;
 
-				if(nextTrip != null)
-				{
-					var timePattern = LocalTimePattern.CreateWithInvariantCulture("HH:mm"); // 13:30
-					var datePattern = LocalDatePattern.CreateWithInvariantCulture("dd.MM.yy"); // 06.01.24
+                    var timePattern = LocalTimePattern.CreateWithInvariantCulture("HH:mm"); // 13:30
+                    var datePattern = LocalDatePattern.CreateWithInvariantCulture("dd.MM.yy"); // 06.01.24
 
-					var nextDepatureTime = timePattern.Parse(nextTrip.Origin.Time).Value;
-					var nextDepatureDate = datePattern.Parse(nextTrip.Origin.Date).Value;
+                    var nextDepatureTime = timePattern.Parse(tripStart.RealtimeTime ?? tripStart.Time).Value;
+                    var nextDepatureDate = datePattern.Parse(tripStart.RealtimeDate ?? tripStart.Date).Value;
 
-					var nextDepature = nextDepatureTime.On(nextDepatureDate);
-					var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
+                    var nextDepature = nextDepatureTime.On(nextDepatureDate);
 
-					var timeToNext = Period.Between(localTime, nextDepature, PeriodUnits.Minutes);
-					result.Value = timeToNext.Minutes;
-				}
+                    var timeToNext = Period.Between(localTime, nextDepature, PeriodUnits.Minutes);
+                    result.Attributes.Trips.Add(new TripMqttStatusUpdateAttributesTripInfo
+                    {
+                        DueIn = timeToNext.Minutes,
+                        DueAt = (tripStart.RealtimeDate ?? tripStart.Date) + " " + (tripStart.RealtimeTime ?? tripStart.Time),
+                        ScheduledAt = tripStart.Date + " " + tripStart.Time,
+                        Route = firstLeg.Name,
+                        Track = tripStart.Track,
+                        Type = firstLeg.Type
+                    });
+                }
 
-				await _mqtt.PublishAsync(new MqttApplicationMessageBuilder()
+                result.Value = result.Attributes.Trips.Min(x => x.DueIn);
+                await _mqtt.PublishAsync(new MqttApplicationMessageBuilder()
 					.WithTopic(_mqtt.MqttOptions.NodeId + "/status/trips/" + tripToPublish.Name.ToLower().Replace(" ", "_"))
 					.WithPayload(JsonSerializer.Serialize(result, RejseplanenJsonContext.Default.TripMqttStatusUpdate))
 					.Build());
@@ -100,7 +112,38 @@ public class TripMqttStatusUpdate
 	[JsonPropertyName("value")]
 	public long Value { get; set; }
     [JsonPropertyName("attributes")]
-	public JsonNode Attributes { get; set; } = null!;
+	public TripMqttStatusUpdateAttributes Attributes { get; set; } = null!;
+}
+
+public class TripMqttStatusUpdateAttributes
+{
+    [JsonPropertyName("ts")]
+    public long Timestamp { get; set; }
+
+    [JsonPropertyName("trips")]
+    public List<TripMqttStatusUpdateAttributesTripInfo> Trips { get; set; } = new List<TripMqttStatusUpdateAttributesTripInfo>();
+}
+
+public class TripMqttStatusUpdateAttributesTripInfo
+{
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; }
+
+    [JsonPropertyName("route")]
+    public string Route { get; set; }
+
+    [JsonPropertyName("track")]
+    public string? Track { get; set; }
+
+    [JsonPropertyName("due_in")]
+    public long DueIn { get; set; }
+
+    [JsonPropertyName("due_at")]
+    public string DueAt { get; set; }
+
+    [JsonPropertyName("scheduled_at")]
+    public string ScheduledAt { get; set; }
 }
 
 public class TripToInform
