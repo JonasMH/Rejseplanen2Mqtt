@@ -2,7 +2,7 @@
 
 namespace Rejseplanen2Mqtt.Client;
 
-public class TripResponse
+public class ApiTripResponse
 {
     [JsonPropertyName("TripList")]
     public TripList TripList { get; set; } = null!;

@@ -128,10 +128,10 @@ public class TripMqttStatusUpdateAttributesTripInfo
 {
 
     [JsonPropertyName("type")]
-    public string Type { get; set; }
+    public string Type { get; set; } = null!;
 
     [JsonPropertyName("route")]
-    public string Route { get; set; }
+    public string Route { get; set; } = null!;
 
     [JsonPropertyName("track")]
     public string? Track { get; set; }
@@ -140,10 +140,10 @@ public class TripMqttStatusUpdateAttributesTripInfo
     public long DueIn { get; set; }
 
     [JsonPropertyName("due_at")]
-    public string DueAt { get; set; }
+    public string DueAt { get; set; } = null!;
 
     [JsonPropertyName("scheduled_at")]
-    public string ScheduledAt { get; set; }
+    public string ScheduledAt { get; set; } = null!;
 }
 
 public class TripToInform

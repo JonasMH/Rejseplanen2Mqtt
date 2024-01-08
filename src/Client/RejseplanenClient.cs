@@ -35,7 +35,7 @@ public class RejseplanenClient
 
 		response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadFromJsonAsync(RejseplanenJsonContext.Default.TripResponse)!;
+        var json = await response.Content.ReadFromJsonAsync(RejseplanenJsonContext.Default.ApiTripResponse)!;
         var result = new List<TripResponse>();
 
         foreach (var trip in json!.TripList.Trips)

@@ -5,6 +5,7 @@ namespace Rejseplanen2Mqtt.Client;
 
 [JsonSerializable(typeof(DepartureBoardResponse))]
 [JsonSerializable(typeof(TripResponse))]
+[JsonSerializable(typeof(ApiTripResponse))]
 [JsonSerializable(typeof(TripLeg))]
 [JsonSerializable(typeof(List<TripLeg>))]
 [JsonSerializable(typeof(TripMqttStatusUpdate))]
