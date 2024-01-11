@@ -14,7 +14,7 @@ public class RejseplanenToMqttOptions
             Name = "Hedensted to Aarhus",
             OriginId = "8600071", // Hedensted St.
 			DestId  = "8600053", // Aarhus H
-            Time = "6:50"
+            Time = "06:50"
         },
     ];
 }
