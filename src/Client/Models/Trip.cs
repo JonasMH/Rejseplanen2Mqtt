@@ -14,5 +14,5 @@ public class Trip
 public class TripResponse
 {
     public bool Cancelled { get; set; }
-    public List<TripLeg> Legs { get; set; } = new List<TripLeg>();
+    public List<TripLeg> Legs { get; set; } = [];
 }

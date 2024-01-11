@@ -1,10 +1,17 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Specialized;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http.Extensions;
+using NodaTime.Text;
 
 namespace Rejseplanen2Mqtt.Client;
 
 public class RejseplanenClient
 {
     private readonly HttpClient _httpClient;
+
+
+    public static LocalTimePattern TimePattern { get; } = LocalTimePattern.CreateWithInvariantCulture("HH:mm"); // 13:30
+    public static LocalDatePattern DatePattern { get; } = LocalDatePattern.CreateWithInvariantCulture("dd.MM.yy"); // 06.01.24
 
     public RejseplanenClient(HttpClient httpClient, RejseplanenClientOptions options)
     {
@@ -27,9 +34,26 @@ public class RejseplanenClient
 
     public async Task<List<TripResponse>> TripAsync(TripRequestOptions options)
 	{
-		var request = new HttpRequestMessage()
+        var requestParameters = new QueryBuilder
+        {
+            { "format", "json" },
+            { "originId", options.OriginId },
+            { "destId", options.DestId }
+        };
+
+        if(options.Date.HasValue)
+        {
+            requestParameters.Add("date", DatePattern.Format(options.Date.Value));
+        }
+
+        if(options.Time.HasValue)
+        {
+            requestParameters.Add("time", TimePattern.Format(options.Time.Value));
+        }
+
+        var request = new HttpRequestMessage()
 		{
-			RequestUri = new Uri($"/bin/rest.exe/trip?originId={options.OriginId}&destId={options.DestId}&format=json", UriKind.Relative)
+			RequestUri = new Uri($"/bin/rest.exe/trip" + requestParameters.ToString(), UriKind.Relative)
 		};
 		var response = await _httpClient.SendAsync(request);
 

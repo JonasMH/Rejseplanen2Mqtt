@@ -1,11 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using HomeAssistantDiscoveryNet;
+using Microsoft.Extensions.Options;
 using MQTTnet;
 using NodaTime;
-using NodaTime.Text;
-using Rejseplanen2Mqtt.Client;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using ToMqttNet;
 
@@ -13,28 +11,18 @@ namespace Rejseplanen2Mqtt.Client;
 
 public class RejsePlanenToMqttBackgroundService(
     ILogger<RejsePlanenToMqttBackgroundService> logger,
+    IOptions<RejseplanenToMqttOptions> options,
     RejseplanenClient rejseplanenClient,
     MqttConnectionService mqtt) : BackgroundService
 {
 	private readonly ILogger<RejsePlanenToMqttBackgroundService> _logger = logger;
-	private readonly RejseplanenClient _rejseplanenClient = rejseplanenClient;
+    private readonly RejseplanenToMqttOptions options = options.Value;
+    private readonly RejseplanenClient _rejseplanenClient = rejseplanenClient;
 	private readonly MqttConnectionService _mqtt = mqtt;
-	private readonly List<TripToInform> _tripsToPublish = [
-		new TripToInform {
-			Name = "Aarhus to Hedensted",
-			OriginId = "8600053", // Aarhus H
-			DestId = "8600071", // Hedensted St.
-		},
-		new TripToInform {
-			Name = "Hedensted to Aarhus",
-			OriginId = "8600071", // Hedensted St.
-			DestId  = "8600053", // Aarhus H
-		},
-	];
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		foreach (var trip in _tripsToPublish)
+		foreach (var trip in options.TripsToPublish)
 		{
 			var discoveryDoc = new MqttSensorDiscoveryConfig()
 			{
@@ -52,13 +40,26 @@ public class RejsePlanenToMqttBackgroundService(
 
 		while (!stoppingToken.IsCancellationRequested)
 		{
-			foreach (var tripToPublish in _tripsToPublish)
+			foreach (var tripToPublish in options.TripsToPublish)
 			{
-				var response = await _rejseplanenClient.TripAsync(new TripRequestOptions
-				{
-					OriginId = tripToPublish.OriginId,
-					DestId = tripToPublish.DestId
-				});
+                var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
+                var requestOptions = new TripRequestOptions
+                {
+                    OriginId = tripToPublish.OriginId,
+                    DestId = tripToPublish.DestId
+                };
+
+                if(tripToPublish.Time != null)
+                {
+                    requestOptions.Time = RejseplanenClient.TimePattern.Parse(tripToPublish.Time).Value;
+
+                    if(requestOptions.Time.Value.PlusHours(3) < localTime.TimeOfDay) // We're far enough away from the request time that we should switch to the next day
+                    {
+                        requestOptions.Date = localTime.Date.PlusDays(1);
+                    }
+                }
+
+                var response = await _rejseplanenClient.TripAsync(requestOptions);
 
 				var result = new TripMqttStatusUpdate
 				{
@@ -68,19 +69,14 @@ public class RejsePlanenToMqttBackgroundService(
                     }
 				};
 
-                // Filter out any trips with multiple legs
-                var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
 
                 foreach (var directTrip in response.Where(x => !x.Cancelled && x.Legs.Count == 1)) // Only show direct trips
                 {
                     var firstLeg = directTrip.Legs.First();
                     var tripStart = firstLeg.Origin;
 
-                    var timePattern = LocalTimePattern.CreateWithInvariantCulture("HH:mm"); // 13:30
-                    var datePattern = LocalDatePattern.CreateWithInvariantCulture("dd.MM.yy"); // 06.01.24
-
-                    var nextDepatureTime = timePattern.Parse(tripStart.RealtimeTime ?? tripStart.Time).Value;
-                    var nextDepatureDate = datePattern.Parse(tripStart.RealtimeDate ?? tripStart.Date).Value;
+                    var nextDepatureTime = RejseplanenClient.TimePattern.Parse(tripStart.RealtimeTime ?? tripStart.Time).Value;
+                    var nextDepatureDate = RejseplanenClient.DatePattern.Parse(tripStart.RealtimeDate ?? tripStart.Date).Value;
 
                     var nextDepature = nextDepatureTime.On(nextDepatureDate);
 
@@ -152,4 +148,5 @@ public class TripToInform
 	public string Name { get; set; } = null!;
     public string OriginId { get; set; } = null!;
     public string DestId { get; set; } = null!;
+    public string? Time { get; set; } = null!;
 }

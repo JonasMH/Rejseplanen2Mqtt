@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MQTTnet.Client;
 using OpenTelemetry.Metrics;
 using Rejseplanen2Mqtt.Client;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using ToMqttNet;
 
@@ -15,6 +16,7 @@ builder.Logging.AddSimpleConsole(options =>
 	options.TimestampFormat = "HH:mm:ss ";
 });
 builder.Services.AddOptions<MqttOptions>().BindConfiguration("MqttConnectionOptions");
+builder.Services.AddOptions<RejseplanenToMqttOptions>().BindConfiguration("RejseplanenToMqttOptions");
 
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenTelemetry()
@@ -32,6 +34,12 @@ builder.Services.AddMqttConnection()
 	{
 		var mqttConf = mqttConfI.Value;
 		options.NodeId = "rejseplanen";
+        options.OriginConfig = new HomeAssistantDiscoveryNet.MqttDiscoveryConfigOrigin
+        {
+            Name = "rejseplanen2mqtt",
+            SoftwareVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString(),
+            SupportUrl = "https://github.com/JonasMH/Rejseplanen2Mqtt"
+        };
 
 		var tcpOptions = new MqttClientTcpOptions
 		{
