@@ -15,33 +15,34 @@ public class RejsePlanenToMqttBackgroundService(
     RejseplanenClient rejseplanenClient,
     MqttConnectionService mqtt) : BackgroundService
 {
-	private readonly ILogger<RejsePlanenToMqttBackgroundService> _logger = logger;
+    private readonly ILogger<RejsePlanenToMqttBackgroundService> _logger = logger;
     private readonly RejseplanenToMqttOptions options = options.Value;
     private readonly RejseplanenClient _rejseplanenClient = rejseplanenClient;
-	private readonly MqttConnectionService _mqtt = mqtt;
+    private readonly MqttConnectionService _mqtt = mqtt;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-	{
-		foreach (var trip in options.TripsToPublish)
-		{
-			var discoveryDoc = new MqttSensorDiscoveryConfig()
-			{
-				UniqueId = "rejseplanen_" + trip.Name.ToLower().Replace(" ", "_"),
-				Name = trip.Name,
-				UnitOfMeasurement = HomeAssistantUnits.TIME_MINUTES.Value,
-				ValueTemplate = "{{ value_json.value }}",
-				StateTopic = _mqtt.MqttOptions.NodeId + "/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
-				JsonAttributesTopic = _mqtt.MqttOptions.NodeId + "/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
-				JsonAttributesTemplate = "{{ value_json.attributes | to_json }}",
-			};
+    {
+        foreach (var trip in options.TripsToPublish)
+        {
+            var discoveryDoc = new MqttSensorDiscoveryConfig()
+            {
+                UniqueId = "rejseplanen_" + trip.Name.ToLower().Replace(" ", "_"),
+                Name = trip.Name,
+                UnitOfMeasurement = HomeAssistantUnits.TIME_MINUTES.Value,
+                ValueTemplate = "{{ value_json.value }}",
+                StateTopic = _mqtt.MqttOptions.NodeId + "/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
+                JsonAttributesTopic = _mqtt.MqttOptions.NodeId + "/status/trips/" + trip.Name.ToLower().Replace(" ", "_"),
+                JsonAttributesTemplate = "{{ value_json.attributes | to_json }}",
+            };
 
-			await _mqtt.PublishDiscoveryDocument(discoveryDoc);
-		}
+            await _mqtt.PublishDiscoveryDocument(discoveryDoc);
+        }
 
-		while (!stoppingToken.IsCancellationRequested)
-		{
-			foreach (var tripToPublish in options.TripsToPublish)
-			{
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Publishing trips...");
+            foreach (var tripToPublish in options.TripsToPublish)
+            {
                 var localTime = SystemClock.Instance.GetCurrentInstant().InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull("Europe/Copenhagen")!).LocalDateTime;
                 var requestOptions = new TripRequestOptions
                 {
@@ -49,11 +50,11 @@ public class RejsePlanenToMqttBackgroundService(
                     DestId = tripToPublish.DestId
                 };
 
-                if(tripToPublish.Time != null)
+                if (tripToPublish.Time != null)
                 {
                     requestOptions.Time = RejseplanenClient.TimePattern.Parse(tripToPublish.Time).Value;
 
-                    if(requestOptions.Time.Value.PlusHours(3) < localTime.TimeOfDay) // We're far enough away from the request time that we should switch to the next day
+                    if (requestOptions.Time.Value.PlusHours(3) < localTime.TimeOfDay) // We're far enough away from the request time that we should switch to the next day
                     {
                         requestOptions.Date = localTime.Date.PlusDays(1);
                     }
@@ -61,13 +62,14 @@ public class RejsePlanenToMqttBackgroundService(
 
                 var response = await _rejseplanenClient.TripAsync(requestOptions);
 
-				var result = new TripMqttStatusUpdate
-				{
-					Value = -1,
-                    Attributes = new() {
+                var result = new TripMqttStatusUpdate
+                {
+                    Value = -1,
+                    Attributes = new()
+                    {
                         Timestamp = SystemClock.Instance.GetCurrentInstant().ToUnixTimeSeconds(),
                     }
-				};
+                };
 
 
                 foreach (var directTrip in response.Where(x => !x.Cancelled && x.Legs.Count == 1)) // Only show direct trips
@@ -94,22 +96,22 @@ public class RejsePlanenToMqttBackgroundService(
 
                 result.Value = result.Attributes.Trips.Min(x => x.DueIn);
                 await _mqtt.PublishAsync(new MqttApplicationMessageBuilder()
-					.WithTopic(_mqtt.MqttOptions.NodeId + "/status/trips/" + tripToPublish.Name.ToLower().Replace(" ", "_"))
-					.WithPayload(JsonSerializer.Serialize(result, RejseplanenJsonContext.Default.TripMqttStatusUpdate))
-					.Build());
+                    .WithTopic(_mqtt.MqttOptions.NodeId + "/status/trips/" + tripToPublish.Name.ToLower().Replace(" ", "_"))
+                    .WithPayload(JsonSerializer.Serialize(result, RejseplanenJsonContext.Default.TripMqttStatusUpdate))
+                    .Build());
 
-			}
-			await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-		}
-	}
+            }
+            await Task.Delay(TimeSpan.FromSeconds(options.UpdateIntervalSeconds), stoppingToken);
+        }
+    }
 }
 
 public class TripMqttStatusUpdate
 {
-	[JsonPropertyName("value")]
-	public long Value { get; set; }
+    [JsonPropertyName("value")]
+    public long Value { get; set; }
     [JsonPropertyName("attributes")]
-	public TripMqttStatusUpdateAttributes Attributes { get; set; } = null!;
+    public TripMqttStatusUpdateAttributes Attributes { get; set; } = null!;
 }
 
 public class TripMqttStatusUpdateAttributes
@@ -143,9 +145,9 @@ public class TripMqttStatusUpdateAttributesTripInfo
     public string ScheduledAt { get; set; } = null!;
 }
 
-public class TripToInform
+public class TripToPublish
 {
-	public string Name { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public string OriginId { get; set; } = null!;
     public string DestId { get; set; } = null!;
     public string? Time { get; set; } = null!;

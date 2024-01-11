@@ -1,4 +1,6 @@
-version: '3.4'
+# Note this docker-compose file is only meant to be used for developing Rejseplanen2Mqtt, it does not work outside of visual studio without further configuration
+# See README.md for another version which does.
+version: "3.4"
 
 services:
   rejseplanen2mqtt:
