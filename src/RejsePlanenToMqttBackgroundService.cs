@@ -1,4 +1,5 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using HomeAssistantDiscoveryNet;
 using MQTTnet;
 using NodaTime;
 using NodaTime.Text;
@@ -90,7 +91,7 @@ public class RejsePlanenToMqttBackgroundService(
                         DueAt = (tripStart.RealtimeDate ?? tripStart.Date) + " " + (tripStart.RealtimeTime ?? tripStart.Time),
                         ScheduledAt = tripStart.Date + " " + tripStart.Time,
                         Route = firstLeg.Name,
-                        Track = tripStart.Track,
+                        Track = tripStart.RealtimeTrack ?? tripStart.Track,
                         Type = firstLeg.Type
                     });
                 }
@@ -121,7 +122,7 @@ public class TripMqttStatusUpdateAttributes
     public long Timestamp { get; set; }
 
     [JsonPropertyName("trips")]
-    public List<TripMqttStatusUpdateAttributesTripInfo> Trips { get; set; } = new List<TripMqttStatusUpdateAttributesTripInfo>();
+    public List<TripMqttStatusUpdateAttributesTripInfo> Trips { get; set; } = [];
 }
 
 public class TripMqttStatusUpdateAttributesTripInfo
